@@ -17,9 +17,11 @@ input,textarea{font:inherit;width:100%;padding:11px;border:1px solid #ccc;border
 .r{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:8px 0;gap:8px}
 .q button{padding:4px 11px}.q span{margin:0 8px}
 .w{background:#25d366;color:#fff;width:100%;margin-top:10px}
+.cats{display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px}.cats button{white-space:nowrap;background:#fff;color:var(--g);border:1px solid var(--gold)}.cats button.a{background:var(--g);color:var(--gold)}
 </style></head><body>
 <header><h1>مزاج MAZAG</h1><button onclick="openCart()">🛒 السلة (<span id="n">0</span>)</button></header>
 <div class="s"><input id="q" placeholder="ابحث عن منتج..." oninput="draw()"></div>
+<div id="cats" class="cats"></div>
 <div id="g" class="grid"></div><p id="m" style="text-align:center;color:#666"></p>
 <div id="cart" onclick="if(event.target.id=='cart')closeCart()"><div id="box">
 <h2 style="color:var(--g);margin-top:0">سلة المشتريات</h2><div id="items"></div>
@@ -30,13 +32,14 @@ input,textarea{font:inherit;width:100%;padding:11px;border:1px solid #ccc;border
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 const sb=supabase.createClient("https://anrgqsjqvnbnpwxlsxqz.supabase.co","sb_publishable_x2u4Sxpz5zZD3pM-N_Y2HA_Qrn4BWpt");
-const WA="201003258915";let P=[],C={};
+const WA="201003258915";const CATS=["البقالة","مشروبات","ألبان ومشتقاتها","بهارات وتوابل","منتجات بلدية","كوزماتك"];let P=[],C={},cat="الكل";
 try{C=JSON.parse(localStorage.getItem("c")||"{}")}catch(e){}
 const E=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const save=()=>{try{localStorage.setItem("c",JSON.stringify(C))}catch(e){}};
 async function load(){const{data,error}=await sb.from("products").select("*").eq("is_visible",true).order("created_at",{ascending:false});
 if(error){m.textContent="تعذر تحميل المنتجات";return}P=data;draw();count()}
-function draw(){const k=q.value.trim();const L=P.filter(p=>!k||(p.name||"").includes(k));
+function setCat(c){cat=c;draw()}
+function draw(){const k=q.value.trim();cats.innerHTML=["الكل",...CATS].map(c=>`<button class="${c==cat?"a":""}" onclick="setCat('${c}')">${c}</button>`).join("");const L=P.filter(p=>(cat=="الكل"||p.category==cat)&&(!k||(p.name||"").includes(k)));
 g.innerHTML=L.map(p=>`<div class="c">${p.image_url?`<img src="${E(p.image_url)}" alt="">`:'<div class="ph">🌿</div>'}<div class="i"><b>${E(p.name)}</b>${p.weight?`<small>${E(p.weight)}</small>`:""}<span class="p">${p.price??"—"} جنيه</span>${p.description?`<small>${E(p.description)}</small>`:""}<button ${p.stock<=0?"disabled":""} onclick="add('${p.id}')">${p.stock<=0?"غير متوفر":"أضف للسلة"}</button></div></div>`).join("");
 m.textContent=L.length?"":"لا توجد منتجات"}
 function add(id){const p=P.find(x=>x.id==id);C[id]=Math.min((C[id]||0)+1,p.stock);save();count()}
