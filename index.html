@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>مزاج MAZAG</title>
+<style>
+:root{--g:#0b3d2e;--gold:#c9a227}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Tahoma,sans-serif;background:#f6f4ec;color:#222}
+header{background:var(--g);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5;border-bottom:3px solid var(--gold)}
+h1{margin:0;font-size:22px;color:var(--gold)}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 14px;background:var(--gold);color:var(--g);font-weight:700}
+input,textarea{font:inherit;width:100%;padding:11px;border:1px solid #ccc;border-radius:10px;margin:5px 0}
+.s{padding:12px 16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 30px}
+@media(min-width:700px){.grid{grid-template-columns:repeat(4,1fr)}}
+.c{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 6px #0002;display:flex;flex-direction:column}
+.c img,.ph{width:100%;aspect-ratio:1;object-fit:cover;background:#e7e2d0;display:flex;align-items:center;justify-content:center;color:var(--g);font-size:30px}
+.c div.i{padding:10px;display:flex;flex-direction:column;gap:5px;flex:1}.c b{font-size:15px}.c small{color:#666}.p{color:var(--g);font-weight:700}
+.c button{margin-top:auto}.c button:disabled{background:#ccc;color:#777}
+#cart{position:fixed;inset:0;background:#0007;display:none;z-index:10}#cart.o{display:block}
+#box{position:absolute;bottom:0;left:0;right:0;max-height:90%;overflow:auto;background:#fff;border-radius:18px 18px 0 0;padding:16px}
+.r{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:8px 0;gap:8px}
+.q button{padding:4px 11px}.q span{margin:0 8px}
+.w{background:#25d366;color:#fff;width:100%;margin-top:10px}
+</style></head><body>
+<header><h1>مزاج MAZAG</h1><button onclick="openCart()">🛒 السلة (<span id="n">0</span>)</button></header>
+<div class="s"><input id="q" placeholder="ابحث عن منتج..." oninput="draw()"></div>
+<div id="g" class="grid"></div><p id="m" style="text-align:center;color:#666"></p>
+<div id="cart" onclick="if(event.target.id=='cart')closeCart()"><div id="box">
+<h2 style="color:var(--g);margin-top:0">سلة المشتريات</h2><div id="items"></div>
+<h3>الإجمالي: <span id="t">0</span> جنيه</h3>
+<input id="nm" placeholder="الاسم"><input id="ph" type="tel" placeholder="رقم الهاتف"><textarea id="ad" rows="2" placeholder="العنوان"></textarea>
+<button class="w" onclick="send()">إرسال الطلب عبر واتساب</button>
+<button style="width:100%;margin-top:8px;background:#eee" onclick="closeCart()">إغلاق</button></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const sb=supabase.createClient("https://anrgqsjqvnbnpwxlsxqz.supabase.co","sb_publishable_x2u4Sxpz5zZD3pM-N_Y2HA_Qrn4BWpt");
+const WA="201003258915";let P=[],C={};
+try{C=JSON.parse(localStorage.getItem("c")||"{}")}catch(e){}
+const E=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const save=()=>{try{localStorage.setItem("c",JSON.stringify(C))}catch(e){}};
+async function load(){const{data,error}=await sb.from("products").select("*").eq("is_visible",true).order("created_at",{ascending:false});
+if(error){m.textContent="تعذر تحميل المنتجات";return}P=data;draw();count()}
+function draw(){const k=q.value.trim();const L=P.filter(p=>!k||(p.name||"").includes(k));
+g.innerHTML=L.map(p=>`<div class="c">${p.image_url?`<img src="${E(p.image_url)}" alt="">`:'<div class="ph">🌿</div>'}<div class="i"><b>${E(p.name)}</b>${p.weight?`<small>${E(p.weight)}</small>`:""}<span class="p">${p.price??"—"} جنيه</span>${p.description?`<small>${E(p.description)}</small>`:""}<button ${p.stock<=0?"disabled":""} onclick="add('${p.id}')">${p.stock<=0?"غير متوفر":"أضف للسلة"}</button></div></div>`).join("");
+m.textContent=L.length?"":"لا توجد منتجات"}
+function add(id){const p=P.find(x=>x.id==id);C[id]=Math.min((C[id]||0)+1,p.stock);save();count()}
+function chg(id,d){const p=P.find(x=>x.id==id);C[id]=Math.min((C[id]||0)+d,p?p.stock:99);if(C[id]<=0)delete C[id];save();count();cartDraw()}
+function count(){n.textContent=Object.values(C).reduce((a,b)=>a+b,0)}
+function lines(){return Object.keys(C).map(id=>{const p=P.find(x=>x.id==id);return p?{id,name:p.name,weight:p.weight,price:+p.price||0,qty:C[id]}:null}).filter(Boolean)}
+function cartDraw(){const L=lines();items.innerHTML=L.length?L.map(l=>`<div class="r"><div><b>${E(l.name)}</b><br><small>${E(l.weight||"")} — ${l.price} جنيه</small></div><div class="q"><button onclick="chg('${l.id}',1)">+</button><span>${l.qty}</span><button onclick="chg('${l.id}',-1)">−</button></div></div>`).join(""):"<p>السلة فارغة</p>";
+t.textContent=L.reduce((a,l)=>a+l.price*l.qty,0)}
+function openCart(){cartDraw();cart.classList.add("o")}function closeCart(){cart.classList.remove("o")}
+async function send(){const L=lines();if(!L.length)return alert("السلة فارغة");
+const a=nm.value.trim(),b=ph.value.trim(),c=ad.value.trim();if(!a||!b||!c)return alert("اكتب الاسم والهاتف والعنوان");
+const total=L.reduce((s,l)=>s+l.price*l.qty,0);
+const{error}=await sb.from("orders").insert({customer_name:a,phone:b,address:c,items:L,total,status:"جديد"});
+if(error)alert("تعذر حفظ الطلب في النظام، سنكمل الإرسال عبر واتساب");
+const msg=`طلب جديد من مزاج MAZAG\nالاسم: ${a}\nالهاتف: ${b}\nالعنوان: ${c}\n\n`+L.map(l=>`- ${l.name} ${l.weight||""} × ${l.qty} = ${l.price*l.qty} جنيه`).join("\n")+`\n\nالإجمالي: ${total} جنيه`;
+if(!error){C={};save();count()}
+location.href=`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`}
+load();
+</script></body></html>
