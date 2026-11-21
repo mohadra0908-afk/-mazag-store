@@ -18,8 +18,11 @@ input,textarea{font:inherit;width:100%;padding:11px;border:1px solid #ccc;border
 .q button{padding:4px 11px}.q span{margin:0 8px}
 .w{background:#25d366;color:#fff;width:100%;margin-top:10px}
 .cats{display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px}.cats button{white-space:nowrap;background:#fff;color:var(--g);border:1px solid var(--gold)}.cats button.a{background:var(--g);color:var(--gold)}
+.ov{position:fixed;inset:0;background:#0007;display:none;z-index:10}.ov.o{display:block}
+#rbox{position:absolute;bottom:0;left:0;right:0;max-height:90%;overflow:auto;background:#fff;border-radius:18px 18px 0 0;padding:16px}
+.rv{border-bottom:1px solid #eee;padding:10px 0}.rv b{color:var(--g)}.rv small{color:#888}
 </style></head><body>
-<header><h1>مزاج MAZAG</h1><button onclick="openCart()">🛒 السلة (<span id="n">0</span>)</button></header>
+<header><h1>مزاج MAZAG</h1><div style="display:flex;gap:8px"><button onclick="openRv()">💬 آراء</button><button onclick="openCart()">🛒 السلة (<span id="n">0</span>)</button></div></header>
 <div class="s"><input id="q" placeholder="ابحث عن منتج..." oninput="draw()"></div>
 <div id="cats" class="cats"></div>
 <div id="g" class="grid"></div><p id="m" style="text-align:center;color:#666"></p>
@@ -29,6 +32,11 @@ input,textarea{font:inherit;width:100%;padding:11px;border:1px solid #ccc;border
 <input id="nm" placeholder="الاسم"><input id="ph" type="tel" placeholder="رقم الهاتف"><textarea id="ad" rows="2" placeholder="العنوان"></textarea>
 <button class="w" onclick="send()">إرسال الطلب عبر واتساب</button>
 <button style="width:100%;margin-top:8px;background:#eee" onclick="closeCart()">إغلاق</button></div></div>
+<div id="rv" class="ov" onclick="if(event.target.id=='rv')closeRv()"><div id="rbox">
+<h2 style="color:var(--g);margin-top:0">آراء زبائننا</h2><div id="rl"></div>
+<h3>اكتب رأيك</h3><input id="rn" maxlength="40" placeholder="اسمك"><textarea id="rc" rows="3" maxlength="300" placeholder="تعليقك"></textarea>
+<button id="rs" style="width:100%" onclick="sendRv()">إرسال التعليق</button><p id="rm" style="color:var(--g)"></p>
+<button style="width:100%;margin-top:4px;background:#eee" onclick="closeRv()">إغلاق</button></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 const sb=supabase.createClient("https://anrgqsjqvnbnpwxlsxqz.supabase.co","sb_publishable_x2u4Sxpz5zZD3pM-N_Y2HA_Qrn4BWpt");
@@ -57,5 +65,14 @@ if(error)alert("تعذر حفظ الطلب في النظام، سنكمل الإ
 const msg=`طلب جديد من مزاج MAZAG\nالاسم: ${a}\nالهاتف: ${b}\nالعنوان: ${c}\n\n`+L.map(l=>`- ${l.name} ${l.weight||""} × ${l.qty} = ${l.price*l.qty} جنيه`).join("\n")+`\n\nالإجمالي: ${total} جنيه`;
 if(!error){C={};save();count()}
 location.href=`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`}
+async function openRv(){rv.classList.add("o");rm.textContent="";rl.textContent="جاري التحميل...";
+const{data,error}=await sb.from("reviews").select("name,comment,created_at").eq("approved",true).order("created_at",{ascending:false}).limit(50);
+if(error){rl.textContent="تعذر تحميل الآراء";return}
+rl.innerHTML=data.length?data.map(r=>`<div class="rv"><b>${E(r.name)}</b><br>${E(r.comment)}<br><small>${new Date(r.created_at).toLocaleDateString("ar-EG")}</small></div>`).join(""):"<p>كن أول من يكتب رأيه</p>"}
+function closeRv(){rv.classList.remove("o")}
+async function sendRv(){const a=rn.value.trim(),c=rc.value.trim();if(!a||!c)return alert("اكتب الاسم والتعليق");
+rs.disabled=true;const{error}=await sb.from("reviews").insert({name:a,comment:c});rs.disabled=false;
+if(error){rm.textContent="تعذر الإرسال، حاول مرة أخرى";return}
+rn.value="";rc.value="";rm.textContent="شكراً لك! سيظهر تعليقك بعد المراجعة."}
 load();
 </script></body></html>

@@ -12,9 +12,9 @@ input,textarea{font:inherit;width:100%;padding:10px;border:1px solid #ccc;border
 </style></head><body>
 <header><b>لوحة إدارة مزاج MAZAG</b><button id="out" class="x" onclick="logout()">خروج</button></header>
 <div id="L" class="b"><h3>تسجيل دخول المدير</h3><input id="em" type="email" placeholder="البريد الإلكتروني"><input id="pw" type="password" placeholder="كلمة المرور"><button onclick="login()">دخول</button><p id="le" style="color:#b3261e"></p></div>
-<div id="A" class="x"><div class="t"><button id="t1" class="a" onclick="tab(1)">المنتجات</button><button id="t2" onclick="tab(2)">الطلبات</button></div>
+<div id="A" class="x"><div class="t"><button id="t1" class="a" onclick="tab(1)">المنتجات</button><button id="t2" onclick="tab(2)">الطلبات</button><button id="t3" onclick="tab(3)">التعليقات</button></div>
 <div id="V1"><div class="b"><h3 id="ft">إضافة منتج</h3><input id="pn" placeholder="اسم المنتج"><input id="pp" type="number" step="0.01" placeholder="السعر (جنيه)"><input id="pwt" placeholder="الوزن (مثال: 500 جرام)"><select id="pc" style="width:100%;padding:10px;margin:4px 0;font-weight:400;background:#fff"></select><input id="ps" type="number" placeholder="الكمية في المخزون"><textarea id="pd" rows="2" placeholder="وصف (اختياري)"></textarea><input id="pf" type="file" accept="image/*"><label><input id="pv" type="checkbox" checked style="width:auto"> ظاهر في المتجر</label><br><button onclick="saveP()">حفظ</button> <button style="background:#ddd" onclick="reset()">جديد</button><p id="fm"></p></div><div id="PL" class="b"></div></div>
-<div id="V2" class="x"><div id="OL" class="b"></div></div></div>
+<div id="V2" class="x"><div id="OL" class="b"></div></div><div id="V3" class="x"><div id="RL" class="b"></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 const sb=supabase.createClient("https://anrgqsjqvnbnpwxlsxqz.supabase.co","sb_publishable_x2u4Sxpz5zZD3pM-N_Y2HA_Qrn4BWpt");
@@ -25,8 +25,8 @@ async function logout(){await sb.auth.signOut();location.reload()}
 async function init(){const{data:{user}}=await sb.auth.getUser();if(!user)return;
 const{data}=await sb.from("admins").select("user_id").eq("user_id",user.id);
 if(!data||!data.length){le.textContent="هذا الحساب ليس مديراً";await sb.auth.signOut();return}
-L.classList.add("x");A.classList.remove("x");out.classList.remove("x");loadP();loadO()}
-function tab(n){V1.classList.toggle("x",n!=1);V2.classList.toggle("x",n!=2);t1.className=n==1?"a":"";t2.className=n==2?"a":""}
+L.classList.add("x");A.classList.remove("x");out.classList.remove("x");loadP();loadO();loadR()}
+function tab(n){V1.classList.toggle("x",n!=1);V2.classList.toggle("x",n!=2);V3.classList.toggle("x",n!=3);t1.className=n==1?"a":"";t2.className=n==2?"a":"";t3.className=n==3?"a":""}
 async function loadP(){const{data,error}=await sb.from("products").select("*").order("created_at",{ascending:false});if(error){PL.textContent="خطأ: "+error.message;return}P=data;
 PL.innerHTML=P.map(p=>`<div class="r">${p.image_url?`<img src="${E(p.image_url)}">`:""}<div><b>${E(p.name)}</b><br>${p.price??"-"} جنيه | ${E(p.weight||"")} | مخزون: ${p.stock??0}<br>${E(p.category||"بدون قسم")} | ${p.is_visible?"ظاهر":"مخفي"}</div><button onclick="vis('${p.id}',${!p.is_visible})">${p.is_visible?"إخفاء":"إظهار"}</button><button onclick="ed('${p.id}')">تعديل</button><button class="d" onclick="del('${p.id}')">حذف</button></div>`).join("")||"لا توجد منتجات"}
 async function vis(id,v){await sb.from("products").update({is_visible:v}).eq("id",id);loadP()}
@@ -45,5 +45,9 @@ async function loadO(){const{data,error}=await sb.from("orders").select("*").ord
 OL.innerHTML=data.map(o=>`<div class="r" style="align-items:flex-start"><div><b>${E(o.customer_name)}</b> — ${E(o.phone)}<br>${E(o.address)}<br>${(o.items||[]).map(i=>E(i.name)+" ×"+i.qty).join("، ")}<br><b>${o.total} جنيه</b> | ${new Date(o.created_at).toLocaleString("ar-EG")}</div><select onchange="st('${o.id}',this.value)">${ST.map(s=>`<option ${s==o.status?"selected":""}>${s}</option>`).join("")}</select></div>`).join("")||"لا توجد طلبات"}
 async function st(id,v){await sb.from("orders").update({status:v}).eq("id",id)}
 pc.innerHTML='<option value="">بدون قسم</option>'+CATS.map(c=>`<option>${c}</option>`).join("");
+async function loadR(){const{data,error}=await sb.from("reviews").select("*").order("created_at",{ascending:false});if(error){RL.textContent="خطأ: "+error.message;return}
+RL.innerHTML=data.map(r=>`<div class="r" style="align-items:flex-start"><div><b>${E(r.name)}</b> — ${r.approved?"ظاهر":"بانتظار المراجعة"}<br>${E(r.comment)}</div><button onclick="apR('${r.id}',${!r.approved})">${r.approved?"إخفاء":"قبول"}</button><button class="d" onclick="delR('${r.id}')">حذف</button></div>`).join("")||"لا توجد تعليقات"}
+async function apR(id,v){await sb.from("reviews").update({approved:v}).eq("id",id);loadR()}
+async function delR(id){if(!confirm("حذف التعليق؟"))return;await sb.from("reviews").delete().eq("id",id);loadR()}
 init();
 </script></body></html>
