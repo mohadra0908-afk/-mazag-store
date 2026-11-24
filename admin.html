@@ -46,7 +46,7 @@ fm.textContent="جاري الحفظ...";let url=img;
 const f=pf.files[0];if(f){const path=Date.now()+"-"+Math.random().toString(36).slice(2)+"."+(f.name.split(".").pop()||"jpg");
 const{error}=await sb.storage.from("product-images").upload(path,f);if(error){fm.textContent="فشل رفع الصورة: "+error.message;return}
 url=sb.storage.from("product-images").getPublicUrl(path).data.publicUrl}
-const row={name:pn.value.trim(),price:+pp.value||0,weight:pwt.value.trim(),category:pc.value||null,options:o.out,custom_min:mn,custom_max:null,stock:parseInt(ps.value)||0,description:pd.value.trim(),image_url:url,is_visible:pv.checked};
+const row={name:pn.value.trim(),price:+pp.value||0,weight:pwt.value.trim(),category:pc.value||null,options:o.out,custom_min:mn,stock:parseInt(ps.value)||0,description:pd.value.trim(),image_url:url,is_visible:pv.checked};
 const r=edit?await sb.from("products").update(row).eq("id",edit):await sb.from("products").insert(row);
 if(r.error){fm.textContent="خطأ: "+r.error.message;return}reset();fm.textContent="تم الحفظ";loadP()}
 const ST=["جديد","قيد التجهيز","تم الشحن","تم التسليم","ملغي"];
