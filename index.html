@@ -11,7 +11,9 @@ input,textarea{font:inherit;width:100%;padding:11px;border:1px solid #ccc;border
 .c{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 6px #0002;display:flex;flex-direction:column}
 .c img,.ph{width:100%;aspect-ratio:1;object-fit:cover;background:#e7e2d0;display:flex;align-items:center;justify-content:center;color:var(--g);font-size:30px}
 .c div.i{padding:10px;display:flex;flex-direction:column;gap:5px;flex:1}.c b{font-size:15px}.c small{color:#666}.p{color:var(--g);font-weight:700}
-.c button{margin-top:auto}.c button:disabled{background:#ccc;color:#777}
+.c button.add{margin-top:auto}.c button:disabled{background:#ccc;color:#777}
+.obs{display:flex;flex-wrap:wrap;gap:4px}.ob{padding:5px 9px;font-size:13px;background:#fff;color:var(--g);border:1px solid var(--gold)}.ob.a{background:var(--g);color:var(--gold)}
+.c input{padding:7px;font-size:14px;margin:2px 0}
 #cart{position:fixed;inset:0;background:#0007;display:none;z-index:10}#cart.o{display:block}
 #box{position:absolute;bottom:0;left:0;right:0;max-height:90%;overflow:auto;background:#fff;border-radius:18px 18px 0 0;padding:16px}
 .r{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:8px 0;gap:8px}
@@ -40,27 +42,46 @@ input,textarea{font:inherit;width:100%;padding:11px;border:1px solid #ccc;border
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 const sb=supabase.createClient("https://anrgqsjqvnbnpwxlsxqz.supabase.co","sb_publishable_x2u4Sxpz5zZD3pM-N_Y2HA_Qrn4BWpt");
-const WA="201003258915";const CATS=["البقالة","مشروبات","ألبان ومشتقاتها","بهارات وتوابل","منتجات بلدية","كوزماتك"];let P=[],C={},cat="الكل";
-try{C=JSON.parse(localStorage.getItem("c")||"{}")}catch(e){}
+const WA="201003258915";const CATS=["البقالة","مشروبات","ألبان ومشتقاتها","بهارات وتوابل","منتجات بلدية","كوزماتك"];
+let P=[],C={},cat="الكل",sel={};
+try{C=JSON.parse(localStorage.getItem("c2")||"{}")}catch(e){}
 const E=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const save=()=>{try{localStorage.setItem("c",JSON.stringify(C))}catch(e){}};
+const nd=s=>String(s).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d));
+const save=()=>{try{localStorage.setItem("c2",JSON.stringify(C))}catch(e){}};
+const opts=p=>p.options&&p.options.length?p.options:(+p.price>0?[{w:p.weight||"",p:+p.price}]:[]);
+const cus=p=>+p.custom_min>0,cmin=p=>+p.custom_min;
+const cur=p=>sel[p.id]!==undefined?sel[p.id]:(opts(p).length?0:(cus(p)?-1:null));
 async function load(){const{data,error}=await sb.from("products").select("*").eq("is_visible",true).order("created_at",{ascending:false});
 if(error){m.textContent="تعذر تحميل المنتجات";return}P=data;draw();count()}
 function setCat(c){cat=c;draw()}
-function draw(){const k=q.value.trim();cats.innerHTML=["الكل",...CATS].map(c=>`<button class="${c==cat?"a":""}" onclick="setCat('${c}')">${c}</button>`).join("");const L=P.filter(p=>(cat=="الكل"||p.category==cat)&&(!k||(p.name||"").includes(k)));
-g.innerHTML=L.map(p=>`<div class="c">${p.image_url?`<img src="${E(p.image_url)}" alt="">`:'<div class="ph">🌿</div>'}<div class="i"><b>${E(p.name)}</b>${p.weight?`<small>${E(p.weight)}</small>`:""}<span class="p">${p.price??"—"} جنيه</span>${p.description?`<small>${E(p.description)}</small>`:""}<button ${p.stock<=0?"disabled":""} onclick="add('${p.id}')">${p.stock<=0?"غير متوفر":"أضف للسلة"}</button></div></div>`).join("");
+function pick(id,i){sel[id]=i;draw()}
+function draw(){const k=q.value.trim();cats.innerHTML=["الكل",...CATS].map(c=>`<button class="${c==cat?"a":""}" onclick="setCat('${c}')">${c}</button>`).join("");
+const L=P.filter(p=>(cat=="الكل"||p.category==cat)&&(!k||(p.name||"").includes(k)));
+g.innerHTML=L.map(p=>{const o=opts(p),s=cur(p),ok=p.stock>0&&s!==null;
+const price=s===null?"السعر غير محدد":(s>=0?o[s].p+" جنيه":"بمبلغ تختاره");
+const multi=o.length>1||(cus(p)&&o.length);
+const btns=multi||cus(p)?`<div class="obs">${o.map((x,i)=>`<button class="ob ${s===i?"a":""}" onclick="pick('${p.id}',${i})">${E(x.w||"الوحدة")}</button>`).join("")}${cus(p)?`<button class="ob ${s===-1?"a":""}" onclick="pick('${p.id}',-1)">بمبلغ تختاره</button>`:""}</div>`:(o.length&&o[0].w?`<small>${E(o[0].w)}</small>`:"");
+const ci=s===-1?`<input id="ci-${p.id}" inputmode="decimal" placeholder="اكتب المبلغ (من ${cmin(p)} جنيه فأكثر)">`:"";
+return `<div class="c">${p.image_url?`<img src="${E(p.image_url)}" alt="">`:'<div class="ph">🌿</div>'}<div class="i"><b>${E(p.name)}</b>${btns}${ci}<span class="p">${price}</span>${p.description?`<small>${E(p.description)}</small>`:""}<button class="add" ${ok?"":"disabled"} onclick="add('${p.id}')">${p.stock<=0?"غير متوفر":(s===null?"غير متاح":"أضف للسلة")}</button></div></div>`}).join("");
 m.textContent=L.length?"":"لا توجد منتجات"}
-function add(id){const p=P.find(x=>x.id==id);C[id]=Math.min((C[id]||0)+1,p.stock);save();count()}
-function chg(id,d){const p=P.find(x=>x.id==id);C[id]=Math.min((C[id]||0)+d,p?p.stock:99);if(C[id]<=0)delete C[id];save();count();cartDraw()}
-function count(){n.textContent=Object.values(C).reduce((a,b)=>a+b,0)}
-function lines(){return Object.keys(C).map(id=>{const p=P.find(x=>x.id==id);return p?{id,name:p.name,weight:p.weight,price:+p.price||0,qty:C[id]}:null}).filter(Boolean)}
-function cartDraw(){const L=lines();items.innerHTML=L.length?L.map(l=>`<div class="r"><div><b>${E(l.name)}</b><br><small>${E(l.weight||"")} — ${l.price} جنيه</small></div><div class="q"><button onclick="chg('${l.id}',1)">+</button><span>${l.qty}</span><button onclick="chg('${l.id}',-1)">−</button></div></div>`).join(""):"<p>السلة فارغة</p>";
+function add(id){const p=P.find(x=>x.id==id),s=cur(p);if(s===null)return;let key,l;
+if(s>=0){key=id+"|o"+s;l={id,t:"o",i:s}}
+else{const v=parseFloat(nd(document.getElementById("ci-"+id).value)),mn=cmin(p);
+if(!(v>=mn))return alert("أقل مبلغ هو "+mn+" جنيه");key=id+"|c"+v;l={id,t:"c",a:v}}
+const e=C[key]||{...l,qty:0};e.qty=Math.min(e.qty+1,p.stock);C[key]=e;save();count()}
+function info(l){const p=P.find(x=>x.id==l.id);if(!p)return null;
+if(l.t=="o"){const o=opts(p)[l.i];if(!o)return null;return{name:p.name,weight:o.w,price:o.p,qty:l.qty}}
+if(!cus(p)||l.a<cmin(p))return null;return{name:p.name,weight:"بمبلغ",price:l.a,qty:l.qty}}
+function lines(){return Object.keys(C).map(k=>{const x=info(C[k]);return x?{...x,key:k}:null}).filter(Boolean)}
+function chg(key,d){const e=C[key];if(!e)return;const p=P.find(x=>x.id==e.id);e.qty=Math.min(e.qty+d,p?p.stock:99);if(e.qty<=0)delete C[key];save();count();cartDraw()}
+function count(){n.textContent=lines().reduce((a,l)=>a+l.qty,0)}
+function cartDraw(){const L=lines();items.innerHTML=L.length?L.map(l=>`<div class="r"><div><b>${E(l.name)}</b><br><small>${E(l.weight||"")} — ${l.price} جنيه</small></div><div class="q"><button onclick="chg('${l.key}',1)">+</button><span>${l.qty}</span><button onclick="chg('${l.key}',-1)">−</button></div></div>`).join(""):"<p>السلة فارغة</p>";
 t.textContent=L.reduce((a,l)=>a+l.price*l.qty,0)}
 function openCart(){cartDraw();cart.classList.add("o")}function closeCart(){cart.classList.remove("o")}
 async function send(){const L=lines();if(!L.length)return alert("السلة فارغة");
 const a=nm.value.trim(),b=ph.value.trim(),c=ad.value.trim();if(!a||!b||!c)return alert("اكتب الاسم والهاتف والعنوان");
 const total=L.reduce((s,l)=>s+l.price*l.qty,0);
-const{error}=await sb.from("orders").insert({customer_name:a,phone:b,address:c,items:L,total,status:"جديد"});
+const{error}=await sb.from("orders").insert({customer_name:a,phone:b,address:c,items:L.map(({name,weight,price,qty})=>({name,weight,price,qty})),total,status:"جديد"});
 if(error)alert("تعذر حفظ الطلب في النظام، سنكمل الإرسال عبر واتساب");
 const msg=`طلب جديد من مزاج MAZAG\nالاسم: ${a}\nالهاتف: ${b}\nالعنوان: ${c}\n\n`+L.map(l=>`- ${l.name} ${l.weight||""} × ${l.qty} = ${l.price*l.qty} جنيه`).join("\n")+`\n\nالإجمالي: ${total} جنيه`;
 if(!error){C={};save();count()}
